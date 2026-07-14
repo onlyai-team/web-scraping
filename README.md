@@ -1,9 +1,10 @@
 # mozy-scrape
 
-Web scraper that converts pages to clean, LLM-ready markdown
+Web scraper and search engine aggregator with modular architecture
 
 ## Features
 
+### Web Scraper
 - Single URL and batch scraping
 - Markdown output optimized for LLM consumption
 - Main content extraction (Readability) or full-page mode
@@ -11,6 +12,34 @@ Web scraper that converts pages to clean, LLM-ready markdown
 - Ad/tracker domain blocking (GA, Facebook, Hotjar, etc.)
 - Browser context pooling with configurable recycling
 - Per-domain request delay throttling
+
+### Search Engine
+- Modular search engine architecture
+- DuckDuckGo Lite integration
+- Round-robin load balancing across multiple engines
+- Automatic fallback on engine failure
+- Extensible design for adding new search engines
+
+## Architecture
+
+```
+src/
+├── scraper/          # Web scraping module
+│   ├── scraper.ts    # Main scraper logic
+│   ├── browser-pool.ts
+│   ├── extractor.ts
+│   ├── html-to-markdown.ts
+│   └── types.ts
+├── search/           # Search engine module
+│   ├── engines/      # Search engine implementations
+│   │   ├── duckduckgo.ts
+│   │   ├── brave.ts  # (stub)
+│   │   └── bing.ts   # (stub)
+│   ├── registry.ts   # Engine registry & round-robin
+│   └── types.ts      # Abstract SearchEngine interface
+└── common/           # Shared utilities
+    └── logger.ts
+```
 
 ## Stack
 
@@ -47,6 +76,7 @@ bun run dev       # start with hot reload
 
 **Endpoints:**
 
+### Web Scraping
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Health check + stats |
@@ -61,6 +91,45 @@ curl -X POST http://localhost:3000/scrape \
 ```
 
 **Request body options:** `url`, `urls`, `format` (`"markdown"`), `timeout`, `waitAfterLoad`, `extractMainContent`, `fullPage`, `includeMetadata`, `blockResources`
+
+### Search Engine
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/search` | Search with round-robin |
+| `GET` | `/search` | Search with query parameters |
+
+```bash
+# Round-robin across all registered engines
+curl -X POST http://localhost:3000/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "typescript web scraping"}'
+
+# Use specific engine
+curl -X POST http://localhost:3000/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "typescript web scraping", "engine": "duckduckgo"}'
+
+# GET request with query parameters
+curl "http://localhost:3000/search?q=typescript&engine=duckduckgo"
+```
+
+**Request body options:** `query` (required), `engine` (optional, defaults to round-robin)
+
+**Response:**
+```json
+{
+  "query": "typescript",
+  "results": [
+    {
+      "title": "TypeScript: JavaScript With Syntax For Types",
+      "url": "https://www.typescriptlang.org/",
+      "description": "TypeScript extends JavaScript by adding types to the language..."
+    }
+  ],
+  "engine": "duckduckgo",
+  "duration": 1234.5
+}
+```
 
 ### Docker
 

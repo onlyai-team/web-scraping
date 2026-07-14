@@ -1,14 +1,17 @@
 #!/usr/bin/env bun
 
-import { createLogger, formatMs } from "./logger.ts";
-import { Scraper } from "./scraper.ts";
-import { DEFAULT_CONFIG, type ScrapeConfig, type ScrapeResult } from "./types.ts";
+import { createLogger, formatMs } from "./common/logger.ts";
+import { Scraper } from "./scraper/index.ts";
+import { DEFAULT_CONFIG, type ScrapeConfig, type ScrapeResult } from "./scraper/types.ts";
+import { SearchEngineRegistry } from "./search/index.ts";
+import { DuckDuckGoEngine } from "./search/engines/duckduckgo.ts";
 
 const log = createLogger("server");
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 
+// Initialize scraper
 const config: Partial<ScrapeConfig> = {
     concurrency: Number(process.env.CONCURRENCY) || DEFAULT_CONFIG.concurrency,
     timeout: Number(process.env.TIMEOUT) || DEFAULT_CONFIG.timeout,
@@ -16,6 +19,10 @@ const config: Partial<ScrapeConfig> = {
 
 const scraper = new Scraper(config);
 await scraper.initialize();
+
+// Initialize search engine registry with round-robin
+const searchRegistry = new SearchEngineRegistry();
+searchRegistry.register(new DuckDuckGoEngine());
 
 log.info("server starting", { host: HOST, port: PORT, concurrency: config.concurrency, timeout: config.timeout });
 
@@ -56,6 +63,13 @@ const server = Bun.serve({
             // Streaming batch scrape (SSE)
             else if (url.pathname === "/scrape/stream" && method === "POST") {
                 response = await handleStream(req, corsHeaders);
+            }
+            // Search API
+            else if (url.pathname === "/search" && method === "POST") {
+                response = await handleSearch(req, corsHeaders);
+            }
+            else if (url.pathname === "/search" && method === "GET") {
+                response = await handleSearchGet(url, corsHeaders);
             } else {
                 response = json({ error: "Not found" }, 404, corsHeaders);
             }
@@ -271,6 +285,82 @@ function json(data: unknown, status: number, extraHeaders: Record<string, string
             ...extraHeaders,
         },
     });
+}
+
+// --- Search Handlers ---
+
+async function handleSearch(req: Request, corsHeaders: Record<string, string>): Promise<Response> {
+    const body = await parseBody(req);
+    const query = body.query as string | undefined;
+    
+    if (!query || typeof query !== "string") {
+        return json({ error: "Missing required field: query" }, 400, corsHeaders);
+    }
+
+    const engineName = body.engine as string | undefined;
+    
+    try {
+        let result;
+        if (engineName) {
+            // Use specific engine
+            const engine = searchRegistry.getEngine(engineName);
+            if (!engine) {
+                return json({ error: `Engine not found: ${engineName}` }, 404, corsHeaders);
+            }
+            result = await engine.search(query);
+        } else {
+            // Use round-robin
+            result = await searchRegistry.searchWithRoundRobin(query);
+        }
+
+        return json(result, 200, corsHeaders);
+    } catch (err) {
+        log.error("search error", {
+            query,
+            engine: engineName || "round-robin",
+            error: err instanceof Error ? err.message : String(err),
+        });
+        return json(
+            { error: err instanceof Error ? err.message : "Search failed" },
+            500,
+            corsHeaders,
+        );
+    }
+}
+
+async function handleSearchGet(url: URL, corsHeaders: Record<string, string>): Promise<Response> {
+    const query = url.searchParams.get("q");
+    const engineName = url.searchParams.get("engine") || undefined;
+
+    if (!query) {
+        return json({ error: "Missing required parameter: q" }, 400, corsHeaders);
+    }
+
+    try {
+        let result;
+        if (engineName) {
+            const engine = searchRegistry.getEngine(engineName);
+            if (!engine) {
+                return json({ error: `Engine not found: ${engineName}` }, 404, corsHeaders);
+            }
+            result = await engine.search(query);
+        } else {
+            result = await searchRegistry.searchWithRoundRobin(query);
+        }
+
+        return json(result, 200, corsHeaders);
+    } catch (err) {
+        log.error("search error", {
+            query,
+            engine: engineName || "round-robin",
+            error: err instanceof Error ? err.message : String(err),
+        });
+        return json(
+            { error: err instanceof Error ? err.message : "Search failed" },
+            500,
+            corsHeaders,
+        );
+    }
 }
 
 // Graceful shutdown

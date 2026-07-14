@@ -1,5 +1,5 @@
 import { type Browser, type BrowserContext, chromium } from "playwright";
-import { createLogger } from "./logger.ts";
+import { createLogger } from "../common/logger.ts";
 import type { BrowserPoolContext, ScrapeConfig } from "./types.ts";
 import { BLOCKED_DOMAINS, USER_AGENT_POOL, VIEWPORT_POOL, ACCEPT_LANGUAGE_POOL } from "./types.ts";
 

@@ -2,7 +2,7 @@ import PQueue from "p-queue";
 import { BrowserPool } from "./browser-pool.ts";
 import { extractContent, extractFullPage } from "./extractor.ts";
 import { htmlToMarkdown } from "./html-to-markdown.ts";
-import { createLogger, formatMs } from "./logger.ts";
+import { createLogger, formatMs } from "../common/logger.ts";
 import {
     DEFAULT_CONFIG,
     type PageMetadata,
