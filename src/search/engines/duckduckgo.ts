@@ -1,4 +1,9 @@
-import { SearchEngine, type SearchConfig, type SearchResponse, type SearchResult } from "../types.ts";
+import {
+	SearchEngine,
+	type SearchConfig,
+	type SearchResponse,
+	type SearchResult,
+} from "../types.ts";
 import { parseHTML } from "linkedom";
 
 /** User-Agent pool for rotation */

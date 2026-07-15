@@ -42,7 +42,8 @@ export class EngineScorer {
 		metrics.totalRequests++;
 		metrics.successfulRequests++;
 		metrics.totalResponseTime += responseTime;
-		metrics.averageResponseTime = metrics.totalResponseTime / metrics.successfulRequests;
+		metrics.averageResponseTime =
+			metrics.totalResponseTime / metrics.successfulRequests;
 		metrics.lastSuccessTime = now;
 		metrics.consecutiveFailures = 0;
 		metrics.lastRequestTime = now;
@@ -75,7 +76,8 @@ export class EngineScorer {
 		metrics.totalRequests++;
 		metrics.failedRequests++;
 		metrics.totalResponseTime += responseTime;
-		metrics.averageResponseTime = metrics.totalResponseTime / metrics.totalRequests;
+		metrics.averageResponseTime =
+			metrics.totalResponseTime / metrics.totalRequests;
 		metrics.lastFailureTime = now;
 		metrics.consecutiveFailures++;
 		metrics.lastRequestTime = now;
@@ -117,7 +119,11 @@ export class EngineScorer {
 	/**
 	 * Get all engines sorted by score (highest first)
 	 */
-	getRankings(): Array<{ engine: string; score: number; metrics: EngineMetrics }> {
+	getRankings(): Array<{
+		engine: string;
+		score: number;
+		metrics: EngineMetrics;
+	}> {
 		return Array.from(this.metrics.entries())
 			.map(([engine, metrics]) => ({
 				engine,
@@ -132,7 +138,9 @@ export class EngineScorer {
 	 */
 	getBestEngine(): string | null {
 		const rankings = this.getRankings();
-		const best = rankings.find(r => r.score >= SCORING_CONFIG.minHealthyScore);
+		const best = rankings.find(
+			(r) => r.score >= SCORING_CONFIG.minHealthyScore,
+		);
 		return best ? best.engine : null;
 	}
 
@@ -149,12 +157,14 @@ export class EngineScorer {
 	private pruneRecentRequests(metrics: EngineMetrics): void {
 		const cutoff = Date.now() - SCORING_CONFIG.recentTimeWindow;
 		metrics.recentRequests = metrics.recentRequests.filter(
-			r => r.timestamp > cutoff
+			(r) => r.timestamp > cutoff,
 		);
 
 		// Also limit by count
 		if (metrics.recentRequests.length > SCORING_CONFIG.recentWindow) {
-			metrics.recentRequests = metrics.recentRequests.slice(-SCORING_CONFIG.recentWindow);
+			metrics.recentRequests = metrics.recentRequests.slice(
+				-SCORING_CONFIG.recentWindow,
+			);
 		}
 	}
 
@@ -164,7 +174,7 @@ export class EngineScorer {
 	private updateRequestsPerMinute(metrics: EngineMetrics): void {
 		const oneMinuteAgo = Date.now() - 60 * 1000;
 		const recentCount = metrics.recentRequests.filter(
-			r => r.timestamp > oneMinuteAgo
+			(r) => r.timestamp > oneMinuteAgo,
 		).length;
 		metrics.requestsPerMinute = recentCount;
 	}
@@ -174,37 +184,46 @@ export class EngineScorer {
 	 */
 	private recalculateScore(metrics: EngineMetrics): void {
 		// Factor 1: Success Rate (0-100)
-		const successRate = metrics.totalRequests > 0
-			? (metrics.successfulRequests / metrics.totalRequests) * 100
-			: 100;
+		const successRate =
+			metrics.totalRequests > 0
+				? (metrics.successfulRequests / metrics.totalRequests) * 100
+				: 100;
 
 		// Factor 2: Response Time Score (0-100)
 		// Assume 500ms is perfect, 5000ms is worst
 		const responseTimeScore = Math.max(
 			0,
-			100 - ((metrics.averageResponseTime - 500) / 45)
+			100 - (metrics.averageResponseTime - 500) / 45,
 		);
 
 		// Factor 3: Recent Performance (0-100)
-		const recentSuccessRate = metrics.recentRequests.length > 0
-			? (metrics.recentRequests.filter(r => r.success).length / metrics.recentRequests.length) * 100
-			: 100;
+		const recentSuccessRate =
+			metrics.recentRequests.length > 0
+				? (metrics.recentRequests.filter((r) => r.success).length /
+						metrics.recentRequests.length) *
+					100
+				: 100;
 
 		// Factor 4: Reliability (0-100)
 		// Based on consecutive failures
 		let reliabilityScore = 100;
 		if (metrics.consecutiveFailures > 0) {
-			reliabilityScore = Math.pow(
-				SCORING_CONFIG.consecutiveFailurePenalty,
-				metrics.consecutiveFailures
-			) * 100;
+			reliabilityScore =
+				Math.pow(
+					SCORING_CONFIG.consecutiveFailurePenalty,
+					metrics.consecutiveFailures,
+				) * 100;
 		}
 
 		// Apply rate limit penalty
 		let rateLimitPenalty = 1;
 		if (metrics.requestsPerMinute > SCORING_CONFIG.maxRequestsPerMinute) {
-			const overage = metrics.requestsPerMinute - SCORING_CONFIG.maxRequestsPerMinute;
-			rateLimitPenalty = Math.max(0.5, 1 - (overage / SCORING_CONFIG.maxRequestsPerMinute));
+			const overage =
+				metrics.requestsPerMinute - SCORING_CONFIG.maxRequestsPerMinute;
+			rateLimitPenalty = Math.max(
+				0.5,
+				1 - overage / SCORING_CONFIG.maxRequestsPerMinute,
+			);
 		}
 
 		// Calculate weighted score
@@ -233,12 +252,12 @@ export class EngineScorer {
 			if (metrics.lastRequestTime) {
 				const timeSinceLastRequest = now - metrics.lastRequestTime;
 				const minutesSinceLastRequest = timeSinceLastRequest / 60000;
-				
+
 				// Apply decay if more than 5 minutes since last request
 				if (minutesSinceLastRequest > 5) {
 					const decayMultiplier = Math.pow(
 						SCORING_CONFIG.decayFactor,
-						Math.floor(minutesSinceLastRequest / 5)
+						Math.floor(minutesSinceLastRequest / 5),
 					);
 					metrics.score = Math.round(metrics.score * decayMultiplier);
 					metrics.score = Math.max(0, metrics.score);
@@ -263,7 +282,7 @@ export class EngineScorer {
 	getHealthSummary(): string {
 		const rankings = this.getRankings();
 		return rankings
-			.map(r => {
+			.map((r) => {
 				const status = r.score >= 80 ? "🟢" : r.score >= 50 ? "🟡" : "🔴";
 				return `${status} ${r.engine}: ${r.score.toFixed(0)} (${r.metrics.successfulRequests}/${r.metrics.totalRequests} success, avg ${r.metrics.averageResponseTime.toFixed(0)}ms)`;
 			})

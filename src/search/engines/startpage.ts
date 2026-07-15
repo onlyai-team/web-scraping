@@ -1,4 +1,9 @@
-import { SearchEngine, type SearchConfig, type SearchResponse, type SearchResult } from "../types.ts";
+import {
+	SearchEngine,
+	type SearchConfig,
+	type SearchResponse,
+	type SearchResult,
+} from "../types.ts";
 import { createLogger } from "../../common/logger.ts";
 
 const logger = createLogger("startpage-engine");
@@ -12,7 +17,7 @@ const UA_POOL = [
 
 /**
  * Startpage search engine
- * 
+ *
  * Flow:
  * 1. GET / -> receive cookie jar + hidden `sc` token
  * 2. POST /sp/search -> HTML results
@@ -61,14 +66,19 @@ export class StartpageEngine extends SearchEngine {
 	/**
 	 * Get session cookies and sc token from homepage
 	 */
-	private async getSession(ua: string): Promise<{ cookies: string; sc: string }> {
+	private async getSession(
+		ua: string,
+	): Promise<{ cookies: string; sc: string }> {
 		const response = await fetch("https://www.startpage.com/", {
 			headers: {
 				"User-Agent": ua,
-				"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+				Accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 				"Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
 			},
-			signal: this.config.timeout ? AbortSignal.timeout(this.config.timeout) : undefined,
+			signal: this.config.timeout
+				? AbortSignal.timeout(this.config.timeout)
+				: undefined,
 			redirect: "follow",
 		});
 
@@ -80,7 +90,7 @@ export class StartpageEngine extends SearchEngine {
 
 		// Extract cookies from Set-Cookie headers
 		const setCookieHeaders = response.headers.getSetCookie?.() || [];
-		const cookies = setCookieHeaders.map(c => c.split(";")[0]).join("; ");
+		const cookies = setCookieHeaders.map((c) => c.split(";")[0]).join("; ");
 
 		// Extract sc token from form
 		const scMatch = html.match(/name="sc"\s+value="([^"]+)"/);
@@ -94,7 +104,12 @@ export class StartpageEngine extends SearchEngine {
 	/**
 	 * POST search request with form data
 	 */
-	private async postSearch(query: string, sc: string, cookies: string, ua: string): Promise<string> {
+	private async postSearch(
+		query: string,
+		sc: string,
+		cookies: string,
+		ua: string,
+	): Promise<string> {
 		const formData = new URLSearchParams();
 		formData.append("query", query);
 		formData.append("sc", sc);
@@ -113,14 +128,17 @@ export class StartpageEngine extends SearchEngine {
 			method: "POST",
 			headers: {
 				"User-Agent": ua,
-				"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+				Accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 				"Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
-				"Referer": "https://www.startpage.com/",
-				"Cookie": cookies,
+				Referer: "https://www.startpage.com/",
+				Cookie: cookies,
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 			body: formData.toString(),
-			signal: this.config.timeout ? AbortSignal.timeout(this.config.timeout) : undefined,
+			signal: this.config.timeout
+				? AbortSignal.timeout(this.config.timeout)
+				: undefined,
 			redirect: "follow",
 		});
 
@@ -148,7 +166,7 @@ export class StartpageEngine extends SearchEngine {
 		// Match <a ...> tags that contain "result-link" in their class attribute
 		// Use a two-step approach: find all <a> tags, then filter by class
 		const anchorRegex = /<a\s([^>]*)>([\s\S]*?)<\/a>/g;
-		
+
 		let match;
 		let rank = 0;
 

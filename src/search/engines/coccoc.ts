@@ -1,4 +1,9 @@
-import { SearchEngine, type SearchConfig, type SearchResponse, type SearchResult } from "../types.ts";
+import {
+	SearchEngine,
+	type SearchConfig,
+	type SearchResponse,
+	type SearchResult,
+} from "../types.ts";
 import { createLogger } from "../../common/logger.ts";
 
 const logger = createLogger("coccoc-engine");
@@ -35,7 +40,8 @@ export class CoccocEngine extends SearchEngine {
 		const response = await fetch(url, {
 			headers: {
 				"User-Agent": ua,
-				"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+				Accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 				"Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
 				"Cache-Control": "no-cache",
 			},
@@ -53,23 +59,23 @@ export class CoccocEngine extends SearchEngine {
 		// Extract window.composerResponse - greedy match to get full JSON
 		const startMarker = "window.composerResponse = ";
 		const startIndex = html.indexOf(startMarker);
-		
+
 		if (startIndex === -1) {
 			throw new Error("Cốc Cốc: composerResponse not found");
 		}
 
 		const jsonStart = startIndex + startMarker.length;
-		
+
 		// Find end: look for </script> or next window. assignment
 		const scriptEnd = html.indexOf("</script>", jsonStart);
 		const windowEnd = html.indexOf("\nwindow.", jsonStart);
-		
+
 		let endIndex = html.length;
 		if (scriptEnd !== -1 && scriptEnd < endIndex) endIndex = scriptEnd;
 		if (windowEnd !== -1 && windowEnd < endIndex) endIndex = windowEnd;
-		
+
 		let jsonStr = html.substring(jsonStart, endIndex).trim();
-		
+
 		// Remove trailing semicolon if present
 		if (jsonStr.endsWith(";")) {
 			jsonStr = jsonStr.slice(0, -1).trim();
@@ -79,7 +85,9 @@ export class CoccocEngine extends SearchEngine {
 		try {
 			data = JSON.parse(jsonStr);
 		} catch (e) {
-			throw new Error(`Cốc Cốc: failed to parse composerResponse: ${String(e)}`);
+			throw new Error(
+				`Cốc Cốc: failed to parse composerResponse: ${String(e)}`,
+			);
 		}
 
 		// Check for captcha

@@ -79,7 +79,10 @@ export class SearchEngineRegistry {
 	 * Tier 2 (50-75):  fallback tier if tier 1 all fail
 	 * Tier 3 (0-50):   last resort
 	 */
-	async searchWithRoundRobin(query: string, preferredEngine?: string): Promise<SearchResponse> {
+	async searchWithRoundRobin(
+		query: string,
+		preferredEngine?: string,
+	): Promise<SearchResponse> {
 		if (this.engines.length === 0) {
 			throw new Error("No search engines registered");
 		}
@@ -91,18 +94,17 @@ export class SearchEngineRegistry {
 		];
 
 		for (const tier of tiers) {
-			const tierEngines = [...this.engines]
-				.filter(e => {
-					const score = this.scorer.getScore(e.name);
-					return score >= tier.min && score <= tier.max;
-				});
+			const tierEngines = [...this.engines].filter((e) => {
+				const score = this.scorer.getScore(e.name);
+				return score >= tier.min && score <= tier.max;
+			});
 
 			if (tierEngines.length === 0) continue;
 
 			// Build round-robin order for this tier
 			const ordered = this.buildTierRoundRobin(tierEngines);
-			if (preferredEngine && ordered.some(e => e.name === preferredEngine)) {
-				const preferred = ordered.find(e => e.name === preferredEngine);
+			if (preferredEngine && ordered.some((e) => e.name === preferredEngine)) {
+				const preferred = ordered.find((e) => e.name === preferredEngine);
 				if (preferred) {
 					const idx = ordered.indexOf(preferred);
 					ordered.splice(idx, 1);
@@ -113,7 +115,9 @@ export class SearchEngineRegistry {
 			logger.info("trying tier", {
 				tier: tier.label,
 				minScore: tier.min,
-				engines: ordered.map(e => `${e.name}(${this.scorer.getScore(e.name)})`),
+				engines: ordered.map(
+					(e) => `${e.name}(${this.scorer.getScore(e.name)})`,
+				),
 			});
 
 			let lastError: Error | null = null;
@@ -176,7 +180,9 @@ export class SearchEngineRegistry {
 
 	private buildTierRoundRobin(engines: SearchEngine[]): SearchEngine[] {
 		// Sort by score descending for deterministic ordering
-		const sorted = [...engines].sort((a, b) => this.scorer.getScore(b.name) - this.scorer.getScore(a.name));
+		const sorted = [...engines].sort(
+			(a, b) => this.scorer.getScore(b.name) - this.scorer.getScore(a.name),
+		);
 		// Rotate based on tier round-robin counter
 		const startIdx = this.tierRoundRobinIndex % sorted.length;
 		this.tierRoundRobinIndex++;
@@ -194,12 +200,15 @@ export class SearchEngineRegistry {
 	 * Get rankings for API response
 	 */
 	getRankings() {
-		return this.scorer.getRankings().map(r => ({
+		return this.scorer.getRankings().map((r) => ({
 			engine: r.engine,
 			score: r.score,
-			successRate: r.metrics.totalRequests > 0
-				? Math.round((r.metrics.successfulRequests / r.metrics.totalRequests) * 100)
-				: 100,
+			successRate:
+				r.metrics.totalRequests > 0
+					? Math.round(
+							(r.metrics.successfulRequests / r.metrics.totalRequests) * 100,
+						)
+					: 100,
 			avgResponseTime: Math.round(r.metrics.averageResponseTime),
 			totalRequests: r.metrics.totalRequests,
 			consecutiveFailures: r.metrics.consecutiveFailures,
@@ -224,7 +233,10 @@ export class SearchEngineRegistry {
 		this.decayInterval = setInterval(() => {
 			this.scorer.applyDecay();
 			logger.debug("applied score decay", {
-				rankings: this.scorer.getRankings().map(r => `${r.engine}:${r.score.toFixed(0)}`).join(", "),
+				rankings: this.scorer
+					.getRankings()
+					.map((r) => `${r.engine}:${r.score.toFixed(0)}`)
+					.join(", "),
 			});
 		}, 60 * 1000);
 	}
