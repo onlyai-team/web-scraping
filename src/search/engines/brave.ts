@@ -1,28 +1,52 @@
-import { SearchEngine, type SearchConfig, type SearchResponse, type SearchResult } from "../types.ts";
-import { parseHTML } from "linkedom";
+import {
+	type SearchConfig,
+	SearchEngine,
+	type SearchResponse,
+	type SearchResult,
+} from "../types.ts";
+
+const BRAVE_WEB_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search";
+
+interface BraveSearchConfig extends SearchConfig {
+	apiKey: string;
+}
+
+interface BraveApiResult {
+	title?: string;
+	url?: string;
+	description?: string;
+}
+
+interface BraveApiResponse {
+	web?: {
+		results?: BraveApiResult[];
+	};
+}
 
 /**
- * Brave Search engine implementation
+ * Brave Web Search API integration.
+ *
+ * An API key is required and is supplied through BRAVE_SEARCH_API_KEY by the
+ * server entry point.
  */
 export class BraveSearchEngine extends SearchEngine {
 	readonly name = "brave";
+	private readonly apiKey: string;
 
-	constructor(config: SearchConfig = {}) {
+	constructor(config: BraveSearchConfig) {
 		super(config);
+		this.apiKey = config.apiKey;
 	}
 
 	async search(query: string): Promise<SearchResponse> {
 		const startTime = performance.now();
-		const encodedQuery = encodeURIComponent(query);
-		const url = `https://search.brave.com/search?q=${encodedQuery}`;
+		const url = new URL(BRAVE_WEB_SEARCH_URL);
+		url.searchParams.set("q", query);
 
 		const response = await fetch(url, {
 			headers: {
-				"User-Agent":
-					"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-				Accept:
-					"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-				"Accept-Language": "en-US,en;q=0.9",
+				Accept: "application/json",
+				"X-Subscription-Token": this.apiKey,
 			},
 			signal: this.config.timeout
 				? AbortSignal.timeout(this.config.timeout)
@@ -30,60 +54,41 @@ export class BraveSearchEngine extends SearchEngine {
 		});
 
 		if (!response.ok) {
-			throw new Error(`Brave search failed: ${response.status}`);
+			const detail = (await response.text()).trim();
+			throw new Error(
+				`Brave Search API failed: ${response.status}${detail ? ` ${detail}` : ""}`,
+			);
 		}
 
-		const html = await response.text();
-		const results = this.parseResults(html);
-		const duration = performance.now() - startTime;
+		let body: BraveApiResponse;
+		try {
+			body = (await response.json()) as BraveApiResponse;
+		} catch {
+			throw new Error("Brave Search API returned an invalid JSON response");
+		}
 
 		return {
 			query,
-			results,
+			results: this.toSearchResults(body.web?.results ?? []),
 			engine: this.name,
-			duration,
+			duration: performance.now() - startTime,
 		};
 	}
 
-	private parseResults(html: string): SearchResult[] {
-		const { document } = parseHTML(html);
-		const results: SearchResult[] = [];
+	private toSearchResults(results: BraveApiResult[]): SearchResult[] {
+		const searchResults: SearchResult[] = [];
 
-		// Brave uses snippet class for search results
-		const snippets = document.querySelectorAll(".snippet");
+		for (const result of results) {
+			if (!result.title || !result.url) continue;
 
-		for (let i = 0; i < snippets.length; i++) {
-			const snippet = snippets[i];
-			if (!snippet) continue;
-
-			const titleEl = snippet.querySelector(".snippet-title");
-			const linkEl = snippet.querySelector("a");
-			const descEl = snippet.querySelector(".snippet-description");
-
-			const title = titleEl?.textContent?.trim() || "";
-			const url = linkEl?.getAttribute("href") || "";
-			const description = descEl?.textContent?.trim() || "";
-
-			if (title && url) {
-				results.push({
-					title,
-					url: this.cleanUrl(url),
-					snippet: description,
-					rank: i + 1,
-				});
-			}
+			searchResults.push({
+				title: result.title,
+				url: result.url,
+				snippet: result.description ?? "",
+				rank: searchResults.length + 1,
+			});
 		}
 
-		return results;
-	}
-
-	private cleanUrl(url: string): string {
-		if (url.startsWith("http://") || url.startsWith("https://")) {
-			return url;
-		}
-		if (url.startsWith("/")) {
-			return `https://search.brave.com${url}`;
-		}
-		return url;
+		return searchResults;
 	}
 }

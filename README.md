@@ -33,7 +33,7 @@ src/
 ├── search/           # Search engine module
 │   ├── engines/      # Search engine implementations
 │   │   ├── duckduckgo.ts
-│   │   ├── brave.ts  # (stub)
+│   │   ├── brave.ts  # Brave Web Search API
 │   │   └── bing.ts   # (stub)
 │   ├── registry.ts   # Engine registry & round-robin
 │   └── types.ts      # Abstract SearchEngine interface
@@ -115,6 +115,16 @@ curl "http://localhost:3000/search?q=typescript&engine=duckduckgo"
 
 **Request body options:** `query` (required), `engine` (optional, defaults to round-robin)
 
+All runtime settings are centralised in `src/config/runtime.ts`. Copy the example environment file and configure only the values you need:
+
+```bash
+cp .env.example .env
+# Set BRAVE_SEARCH_API_KEY in .env
+bun run serve
+```
+
+Brave is registered in the round-robin pool only when `BRAVE_SEARCH_API_KEY` is set. You can select it directly with `"engine": "brave"`.
+
 **Response:**
 ```json
 {
@@ -138,4 +148,4 @@ docker build -t mozy-scrape .
 docker run -p 3000:3000 mozy-scrape
 ```
 
-**Env vars:** `PORT`, `HOST`, `CONCURRENCY`, `TIMEOUT`
+**Env vars:** `PORT`, `HOST`, `CONCURRENCY`, `TIMEOUT`, `BRAVE_SEARCH_API_KEY`, `LOG_LEVEL`

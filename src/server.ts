@@ -1,25 +1,21 @@
 #!/usr/bin/env bun
 
 import { createLogger, formatMs } from "./common/logger.ts";
+import { runtimeConfig } from "./config/runtime.ts";
 import { Scraper } from "./scraper/index.ts";
-import { DEFAULT_CONFIG, type ScrapeConfig, type ScrapeResult } from "./scraper/types.ts";
+import { type ScrapeConfig, type ScrapeResult } from "./scraper/types.ts";
 import { SearchEngineRegistry } from "./search/registry.ts";
 import { DuckDuckGoEngine } from "./search/engines/duckduckgo.ts";
 import { CoccocEngine } from "./search/engines/coccoc.ts";
 import { StartpageEngine } from "./search/engines/startpage.ts";
+import { BraveSearchEngine } from "./search/engines/brave.ts";
 
 const log = createLogger("server");
 
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.HOST || "0.0.0.0";
+const { server: serverConfig, scraper: scraperConfig, search: searchConfig } = runtimeConfig;
 
 // Initialize scraper
-const config: Partial<ScrapeConfig> = {
-    concurrency: Number(process.env.CONCURRENCY) || DEFAULT_CONFIG.concurrency,
-    timeout: Number(process.env.TIMEOUT) || DEFAULT_CONFIG.timeout,
-};
-
-const scraper = new Scraper(config);
+const scraper = new Scraper(scraperConfig);
 await scraper.initialize();
 
 // Initialize search engine registry with round-robin
@@ -28,11 +24,23 @@ searchRegistry.register(new DuckDuckGoEngine());
 searchRegistry.register(new CoccocEngine());
 searchRegistry.register(new StartpageEngine());
 
-log.info("server starting", { host: HOST, port: PORT, concurrency: config.concurrency, timeout: config.timeout });
+const braveApiKey = searchConfig.brave.apiKey;
+if (braveApiKey) {
+    searchRegistry.register(new BraveSearchEngine({ apiKey: braveApiKey }));
+} else {
+    log.warn("Brave Search API disabled: BRAVE_SEARCH_API_KEY is not set");
+}
+
+log.info("server starting", {
+    host: serverConfig.host,
+    port: serverConfig.port,
+    concurrency: scraperConfig.concurrency,
+    timeout: scraperConfig.timeout,
+});
 
 const server = Bun.serve({
-    port: PORT,
-    hostname: HOST,
+    port: serverConfig.port,
+    hostname: serverConfig.host,
 
     async fetch(req) {
         const start = performance.now();
@@ -104,7 +112,7 @@ const server = Bun.serve({
     },
 });
 
-log.info("server ready", { url: `http://${HOST}:${server.port}` });
+log.info("server ready", { url: `http://${serverConfig.host}:${server.port}` });
 
 // --- Handlers ---
 
