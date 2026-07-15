@@ -1,8 +1,7 @@
-import type { SearchEngine } from "./types.ts";
-import type { SearchResponse } from "./types.ts";
+import { createLogger } from "../common/logger.ts";
 import { EngineScorer } from "./engine-scorer.ts";
 import { SCORING_CONFIG } from "./scoring.ts";
-import { createLogger } from "../common/logger.ts";
+import type { SearchEngine, SearchResponse } from "./types.ts";
 
 const logger = createLogger("registry");
 
@@ -157,7 +156,6 @@ export class SearchEngineRegistry {
 					});
 
 					lastError = error as Error;
-					continue;
 				}
 			}
 

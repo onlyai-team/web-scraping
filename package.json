@@ -9,11 +9,15 @@
 	"scripts": {
 		"start": "bun run src/index.ts",
 		"serve": "bun run src/server.ts",
-		"dev": "bun --watch src/server.ts"
+		"dev": "bun --watch src/server.ts",
+		"build": "bun build src/server.ts --outdir dist --target bun --packages external",
+		"check": "bunx biome check src && bunx tsc --noEmit",
+		"test": "bun test"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.13",
 		"@types/bun": "latest",
+		"@types/express": "^5.0.6",
 		"@types/turndown": "^5.0.6"
 	},
 	"peerDependencies": {
@@ -21,6 +25,7 @@
 	},
 	"dependencies": {
 		"defuddle": "^0.6.6",
+		"express": "^5.2.1",
 		"linkedom": "^0.18.12",
 		"p-queue": "^9.1.0",
 		"playwright": "npm:rebrowser-playwright@^1.52.0",

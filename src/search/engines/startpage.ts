@@ -1,10 +1,10 @@
+import { createLogger } from "../../common/logger.ts";
 import {
-	SearchEngine,
 	type SearchConfig,
+	SearchEngine,
 	type SearchResponse,
 	type SearchResult,
 } from "../types.ts";
-import { createLogger } from "../../common/logger.ts";
 
 const logger = createLogger("startpage-engine");
 
@@ -35,7 +35,7 @@ export class StartpageEngine extends SearchEngine {
 		const startTime = performance.now();
 
 		// Rotate User-Agent
-		const ua = UA_POOL[this.requestCount % UA_POOL.length]!;
+		const ua = nextUserAgent(UA_POOL, this.requestCount);
 		this.requestCount++;
 
 		// Step 1: Get session + sc token
@@ -98,7 +98,9 @@ export class StartpageEngine extends SearchEngine {
 			throw new Error("Startpage: sc token not found");
 		}
 
-		return { cookies, sc: scMatch[1]! };
+		const sc = scMatch[1];
+		if (!sc) throw new Error("Startpage: sc token not found");
+		return { cookies, sc };
 	}
 
 	/**
@@ -167,12 +169,11 @@ export class StartpageEngine extends SearchEngine {
 		// Use a two-step approach: find all <a> tags, then filter by class
 		const anchorRegex = /<a\s([^>]*)>([\s\S]*?)<\/a>/g;
 
-		let match;
 		let rank = 0;
 
-		while ((match = anchorRegex.exec(html)) !== null) {
-			const attrs = match[1]!;
-			const innerHtml = match[2]!;
+		for (const match of html.matchAll(anchorRegex)) {
+			const attrs = match[1] ?? "";
+			const innerHtml = match[2] ?? "";
 
 			// Check if this anchor has "result-link" in its class
 			if (!/\bclass="[^"]*\bresult-link\b/.test(attrs)) continue;
@@ -180,10 +181,10 @@ export class StartpageEngine extends SearchEngine {
 			// Extract href
 			const hrefMatch = attrs.match(/href="([^"]+)"/);
 			if (!hrefMatch) continue;
-			const url = hrefMatch[1]!;
+			const url = hrefMatch[1] ?? "";
 
 			// Clean title: remove <style>, tags, comments, entities
-			let title = innerHtml
+			const title = innerHtml
 				.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
 				.replace(/<[^>]+>/g, " ")
 				.replace(/<!--[\s\S]*?-->/g, "")
@@ -203,4 +204,10 @@ export class StartpageEngine extends SearchEngine {
 
 		return results;
 	}
+}
+
+function nextUserAgent(pool: readonly string[], requestCount: number): string {
+	const userAgent = pool[requestCount % pool.length];
+	if (!userAgent) throw new Error("User-Agent pool is empty");
+	return userAgent;
 }

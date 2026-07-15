@@ -1,8 +1,8 @@
 import PQueue from "p-queue";
+import { createLogger, formatMs } from "../common/logger.ts";
 import { BrowserPool } from "./browser-pool.ts";
 import { extractContent, extractFullPage } from "./extractor.ts";
 import { htmlToMarkdown } from "./html-to-markdown.ts";
-import { createLogger, formatMs } from "../common/logger.ts";
 import {
 	DEFAULT_CONFIG,
 	type PageMetadata,
@@ -219,7 +219,7 @@ export class Scraper {
 		// Strip script tags and check remaining body content
 		const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
 		if (bodyMatch) {
-			const bodyContent = bodyMatch[1]!
+			const bodyContent = (bodyMatch[1] ?? "")
 				.replace(/<script[\s\S]*?<\/script>/gi, "")
 				.replace(/<style[\s\S]*?<\/style>/gi, "")
 				.replace(/<[^>]+>/g, "")

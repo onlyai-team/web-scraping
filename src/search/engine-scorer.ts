@@ -1,5 +1,5 @@
 import type { EngineMetrics } from "./scoring.ts";
-import { SCORING_WEIGHTS, SCORING_CONFIG } from "./scoring.ts";
+import { SCORING_CONFIG, SCORING_WEIGHTS } from "./scoring.ts";
 
 /**
  * Scoring system for search engines
@@ -35,8 +35,7 @@ export class EngineScorer {
 	 * Record a successful request
 	 */
 	recordSuccess(engineName: string, responseTime: number): void {
-		this.initialize(engineName);
-		const metrics = this.metrics.get(engineName)!;
+		const metrics = this.getOrCreateMetrics(engineName);
 		const now = Date.now();
 
 		metrics.totalRequests++;
@@ -69,8 +68,7 @@ export class EngineScorer {
 	 * Record a failed request
 	 */
 	recordFailure(engineName: string, responseTime: number, error: string): void {
-		this.initialize(engineName);
-		const metrics = this.metrics.get(engineName)!;
+		const metrics = this.getOrCreateMetrics(engineName);
 		const now = Date.now();
 
 		metrics.totalRequests++;
@@ -114,6 +112,14 @@ export class EngineScorer {
 	 */
 	getMetrics(engineName: string): EngineMetrics | null {
 		return this.metrics.get(engineName) || null;
+	}
+
+	private getOrCreateMetrics(engineName: string): EngineMetrics {
+		this.initialize(engineName);
+		const metrics = this.metrics.get(engineName);
+		if (!metrics)
+			throw new Error(`Metrics unavailable for engine: ${engineName}`);
+		return metrics;
 	}
 
 	/**
@@ -209,10 +215,9 @@ export class EngineScorer {
 		let reliabilityScore = 100;
 		if (metrics.consecutiveFailures > 0) {
 			reliabilityScore =
-				Math.pow(
-					SCORING_CONFIG.consecutiveFailurePenalty,
-					metrics.consecutiveFailures,
-				) * 100;
+				SCORING_CONFIG.consecutiveFailurePenalty **
+					metrics.consecutiveFailures *
+				100;
 		}
 
 		// Apply rate limit penalty
@@ -255,10 +260,9 @@ export class EngineScorer {
 
 				// Apply decay if more than 5 minutes since last request
 				if (minutesSinceLastRequest > 5) {
-					const decayMultiplier = Math.pow(
-						SCORING_CONFIG.decayFactor,
-						Math.floor(minutesSinceLastRequest / 5),
-					);
+					const decayMultiplier =
+						SCORING_CONFIG.decayFactor **
+						Math.floor(minutesSinceLastRequest / 5);
 					metrics.score = Math.round(metrics.score * decayMultiplier);
 					metrics.score = Math.max(0, metrics.score);
 				}

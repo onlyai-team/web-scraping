@@ -1,8 +1,7 @@
 import {
-	SearchEngine,
 	type SearchConfig,
+	SearchEngine,
 	type SearchResponse,
-	type SearchResult,
 } from "../types.ts";
 
 /**
@@ -15,7 +14,7 @@ export class BingSearchEngine extends SearchEngine {
 		super(config);
 	}
 
-	async search(query: string): Promise<SearchResponse> {
+	async search(_query: string): Promise<SearchResponse> {
 		// TODO: Implement Bing search
 		throw new Error("BingSearchEngine.search() not yet implemented");
 	}

@@ -1,10 +1,10 @@
+import { parseHTML } from "linkedom";
 import {
-	SearchEngine,
 	type SearchConfig,
+	SearchEngine,
 	type SearchResponse,
 	type SearchResult,
 } from "../types.ts";
-import { parseHTML } from "linkedom";
 
 /** User-Agent pool for rotation */
 const UA_POOL = [
@@ -46,8 +46,8 @@ export class DuckDuckGoEngine extends SearchEngine {
 		this.lastRequestTime = Date.now();
 
 		// Rotate fingerprint per request
-		const ua = UA_POOL[this.requestCount % UA_POOL.length]!;
-		const kl = KL_POOL[this.requestCount % KL_POOL.length]!;
+		const ua = valueAt(UA_POOL, this.requestCount, "User-Agent");
+		const kl = valueAt(KL_POOL, this.requestCount, "region");
 		this.requestCount++;
 
 		const encodedQuery = encodeURIComponent(query);
@@ -158,4 +158,14 @@ export class DuckDuckGoEngine extends SearchEngine {
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function valueAt(
+	values: readonly string[],
+	index: number,
+	label: string,
+): string {
+	const value = values[index % values.length];
+	if (!value) throw new Error(`${label} pool is empty`);
+	return value;
 }

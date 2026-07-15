@@ -9,13 +9,12 @@ export type {
 	ScrapeResult,
 } from "./scraper/types.js";
 export { DEFAULT_CONFIG } from "./scraper/types.js";
-
+export { DuckDuckGoEngine } from "./search/index.js";
 // Search module
 export { SearchEngineRegistry } from "./search/registry.js";
-export { DuckDuckGoEngine } from "./search/index.js";
 export type {
-	SearchEngine,
-	SearchResult,
-	SearchResponse,
 	SearchConfig,
+	SearchEngine,
+	SearchResponse,
+	SearchResult,
 } from "./search/types.js";

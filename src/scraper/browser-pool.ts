@@ -2,16 +2,18 @@ import { type Browser, type BrowserContext, chromium } from "playwright";
 import { createLogger } from "../common/logger.ts";
 import type { BrowserPoolContext, ScrapeConfig } from "./types.ts";
 import {
+	ACCEPT_LANGUAGE_POOL,
 	BLOCKED_DOMAINS,
 	USER_AGENT_POOL,
 	VIEWPORT_POOL,
-	ACCEPT_LANGUAGE_POOL,
 } from "./types.ts";
 
 const log = createLogger("pool");
 
 function randomItem<T>(arr: readonly T[]): T {
-	return arr[Math.floor(Math.random() * arr.length)]!;
+	const item = arr[Math.floor(Math.random() * arr.length)];
+	if (item === undefined) throw new Error("Cannot select from an empty array");
+	return item;
 }
 
 export class BrowserPool {
@@ -175,12 +177,13 @@ export class BrowserPool {
 			poolCtx.useCount >= this.config.contextMaxUses;
 
 		if (needsRecycle) {
+			const contextId = poolCtx.id;
 			log.info("recycling context", {
-				contextId: poolCtx.id,
+				contextId,
 				useCount: poolCtx.useCount,
 			});
 			this.recycleContext(poolCtx).then(() => {
-				const fresh = this.contexts.get(poolCtx!.id);
+				const fresh = this.contexts.get(contextId);
 				if (!fresh) return;
 				const waiter = this.waiters.shift();
 				if (waiter) {

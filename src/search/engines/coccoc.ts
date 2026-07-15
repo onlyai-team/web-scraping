@@ -1,10 +1,10 @@
+import { createLogger } from "../../common/logger.ts";
 import {
-	SearchEngine,
 	type SearchConfig,
+	SearchEngine,
 	type SearchResponse,
 	type SearchResult,
 } from "../types.ts";
-import { createLogger } from "../../common/logger.ts";
 
 const logger = createLogger("coccoc-engine");
 
@@ -31,7 +31,7 @@ export class CoccocEngine extends SearchEngine {
 		const startTime = performance.now();
 
 		// Rotate User-Agent
-		const ua = UA_POOL[this.requestCount % UA_POOL.length]!;
+		const ua = nextUserAgent(UA_POOL, this.requestCount);
 		this.requestCount++;
 
 		const encodedQuery = encodeURIComponent(query);
@@ -81,7 +81,7 @@ export class CoccocEngine extends SearchEngine {
 			jsonStr = jsonStr.slice(0, -1).trim();
 		}
 
-		let data: any;
+		let data: unknown;
 		try {
 			data = JSON.parse(jsonStr);
 		} catch (e) {
@@ -91,7 +91,10 @@ export class CoccocEngine extends SearchEngine {
 		}
 
 		// Check for captcha
-		if (data?.captcha || data?.verification) {
+		if (
+			isRecord(data) &&
+			(data.captcha !== undefined || data.verification !== undefined)
+		) {
 			throw new Error("provider_verification_required");
 		}
 
@@ -115,19 +118,22 @@ export class CoccocEngine extends SearchEngine {
 	/**
 	 * Parse Cốc Cốc composerResponse to standard format
 	 */
-	private parseResults(data: any): SearchResult[] {
+	private parseResults(data: unknown): SearchResult[] {
 		const results: SearchResult[] = [];
 
 		// search.search_results is an array of direct results
-		const searchResults = data?.search?.search_results || [];
+		const search = isRecord(data) ? data.search : undefined;
+		const searchResults = isRecord(search) ? search.search_results : undefined;
+		if (!Array.isArray(searchResults)) return results;
 
 		for (const item of searchResults) {
+			if (!isRecord(item)) continue;
 			// Skip ads (they have advert_id or type === 'ad')
 			if (item.advert_id || item.type === "ad") continue;
 
-			const title = item.title || "";
-			const url = item.url || "";
-			const snippet = item.content || "";
+			const title = typeof item.title === "string" ? item.title : "";
+			const url = typeof item.url === "string" ? item.url : "";
+			const snippet = typeof item.content === "string" ? item.content : "";
 
 			if (title && url) {
 				// Clean HTML tags from title and snippet
@@ -145,4 +151,14 @@ export class CoccocEngine extends SearchEngine {
 
 		return results;
 	}
+}
+
+function nextUserAgent(pool: readonly string[], requestCount: number): string {
+	const userAgent = pool[requestCount % pool.length];
+	if (!userAgent) throw new Error("User-Agent pool is empty");
+	return userAgent;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

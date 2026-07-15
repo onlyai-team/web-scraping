@@ -41,7 +41,7 @@ export abstract class SearchEngine {
 	 */
 	async isAvailable(): Promise<boolean> {
 		try {
-			const result = await this.search("test");
+			await this.search("test");
 			return true;
 		} catch {
 			return false;

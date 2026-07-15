@@ -24,6 +24,14 @@ Web scraper and search engine aggregator with modular architecture
 
 ```
 src/
+├── app.ts            # Express app composition (testable without opening a port)
+├── server.ts         # Bootstrap, dependency wiring, graceful shutdown
+├── api/              # HTTP transport only
+│   ├── routes/       # Endpoint-to-controller mapping
+│   ├── controllers/  # Request orchestration
+│   ├── validation/   # Request parsing and validation
+│   ├── presenters/   # Stable HTTP response shape
+│   └── middleware/   # CORS, request logging, errors, 404
 ├── scraper/          # Web scraping module
 │   ├── scraper.ts    # Main scraper logic
 │   ├── browser-pool.ts
@@ -51,7 +59,8 @@ src/
 | [turndown](https://github.com/nicepkg/turndown) | HTML-to-Markdown conversion |
 | [turndown-plugin-gfm](https://github.com/nicepkg/turndown-plugin-gfm) | GFM support (tables, strikethrough) |
 | [p-queue](https://github.com/nicepkg/p-queue) | Concurrency queue |
-| [bun](https://bun.sh) | Runtime, HTTP server, bundler |
+| [Express](https://expressjs.com/) | HTTP API framework and middleware pipeline |
+| [bun](https://bun.sh) | Runtime and package manager |
 
 ## Usage
 
@@ -72,6 +81,8 @@ bun run start --full-page https://example.com
 ```bash
 bun run serve     # start on :3000
 bun run dev       # start with hot reload
+bun run check     # format/lint and TypeScript checks
+bun test          # unit tests
 ```
 
 **Endpoints:**
