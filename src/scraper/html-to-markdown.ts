@@ -39,7 +39,7 @@ export function htmlToMarkdown(html: string, baseUrl?: string): string {
     td.use(gfm);
 
     // Strip noise elements
-    td.remove(["script", "style", "noscript", "meta", "link", "svg", "iframe"]);
+    td.remove(["script", "style", "noscript", "meta", "link", "svg" as keyof HTMLElementTagNameMap, "iframe"]);
 
     // -- Custom rules ported from AnyCrawl reference --
 

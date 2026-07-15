@@ -176,7 +176,7 @@ async function handleStream(req: Request, corsHeaders: Record<string, string>): 
             let count = 0;
 
             try {
-                for await (const result of scraper.scrapeStream(body.urls, jobConfig)) {
+                for await (const result of scraper.scrapeStream(body.urls ?? [], jobConfig)) {
                     count++;
                     const event = `data: ${JSON.stringify(formatResult(result))}\n\n`;
                     controller.enqueue(encoder.encode(event));
@@ -297,7 +297,7 @@ function json(data: unknown, status: number, extraHeaders: Record<string, string
 // --- Search Handlers ---
 
 async function handleSearch(req: Request, corsHeaders: Record<string, string>): Promise<Response> {
-    const body = await parseBody(req);
+    const body = await parseBody(req) as any;
     const query = body.query as string | undefined;
     
     if (!query || typeof query !== "string") {

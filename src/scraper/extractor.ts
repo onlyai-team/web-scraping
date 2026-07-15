@@ -197,7 +197,7 @@ function normalizeCodeBlocks(document: Document): void {
         const langSource = code || pre;
         const cls = langSource.getAttribute?.("class") || "";
         const langMatch = cls.match(/(?:language-|lang-)(\w+)/);
-        if (langMatch) lang = langMatch[1];
+        if (langMatch) lang = langMatch[1] ?? "";
 
         // Extract text line-by-line, respecting block elements as newlines
         const lines = extractCodeLines(pre);
