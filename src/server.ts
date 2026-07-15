@@ -6,6 +6,7 @@ import { DEFAULT_CONFIG, type ScrapeConfig, type ScrapeResult } from "./scraper/
 import { SearchEngineRegistry } from "./search/registry.ts";
 import { DuckDuckGoEngine } from "./search/engines/duckduckgo.ts";
 import { CoccocEngine } from "./search/engines/coccoc.ts";
+import { StartpageEngine } from "./search/engines/startpage.ts";
 
 const log = createLogger("server");
 
@@ -25,6 +26,7 @@ await scraper.initialize();
 const searchRegistry = new SearchEngineRegistry();
 searchRegistry.register(new DuckDuckGoEngine());
 searchRegistry.register(new CoccocEngine());
+searchRegistry.register(new StartpageEngine());
 
 log.info("server starting", { host: HOST, port: PORT, concurrency: config.concurrency, timeout: config.timeout });
 
