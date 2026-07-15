@@ -97,11 +97,21 @@ export class SearchEngineRegistry {
 		let lastError: Error | null = null;
 
 		for (const engine of ordered) {
+			// Skip engines below healthy threshold if we have better options
+			const score = this.scorer.getScore(engine.name);
+			if (score < SCORING_CONFIG.minHealthyScore && ordered.filter(e => this.scorer.getScore(e.name) >= SCORING_CONFIG.minHealthyScore).length > 0) {
+				logger.info("skipping unhealthy engine", {
+					engine: engine.name,
+					score,
+				});
+				continue;
+			}
+
 			const startTime = performance.now();
 			try {
 				logger.info("trying engine", {
 					engine: engine.name,
-					score: this.scorer.getScore(engine.name),
+					score,
 				});
 				const result = await engine.search(query);
 				const duration = performance.now() - startTime;
