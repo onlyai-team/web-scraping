@@ -3,8 +3,9 @@
 import { createLogger, formatMs } from "./common/logger.ts";
 import { Scraper } from "./scraper/index.ts";
 import { DEFAULT_CONFIG, type ScrapeConfig, type ScrapeResult } from "./scraper/types.ts";
-import { SearchEngineRegistry } from "./search/index.ts";
+import { SearchEngineRegistry } from "./search/registry.ts";
 import { DuckDuckGoEngine } from "./search/engines/duckduckgo.ts";
+import { CoccocEngine } from "./search/engines/coccoc.ts";
 
 const log = createLogger("server");
 
@@ -23,6 +24,7 @@ await scraper.initialize();
 // Initialize search engine registry with round-robin
 const searchRegistry = new SearchEngineRegistry();
 searchRegistry.register(new DuckDuckGoEngine());
+searchRegistry.register(new CoccocEngine());
 
 log.info("server starting", { host: HOST, port: PORT, concurrency: config.concurrency, timeout: config.timeout });
 
